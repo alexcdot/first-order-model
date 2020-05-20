@@ -1,0 +1,73 @@
+<!doctype html>
+
+<!--
+ *  Copyright (c) 2020 The WebRTC project authors + me, Alexander Cui. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license
+ *  that can be found in the LICENSE file in the root of the source
+ *  tree.
+-->
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1, maximum-scale=1">
+        <!--
+        <meta name="description" content="WebRTC code samples">
+        <meta itemprop="description" content="Client-side WebRTC code samples">
+        <meta itemprop="image" content="../../../images/webrtc-icon-192x192.png">
+        <meta itemprop="name" content="WebRTC code samples">
+        -->
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta id="theme-color" name="theme-color" content="#ffffff">
+
+        <base target="_blank">
+
+        <title>Clone Generator</title>
+
+        <!--
+        <link rel="icon" sizes="192x192" href="../../../images/webrtc-icon-192x192.png">
+        -->
+        <link href="//fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet" type="text/css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+    </head>
+
+    <body>
+        <h1>Create video clones!</h1>
+        
+        
+        By default, the source image is of Mona Lisa and the driving video is of Donald Trump - so you can hit the "Upload" button to see a cloned video without uploading anything yourself. If you do upload, make sure the images and driving video are cropped to the head. It will take 1.5 seconds to generate every 1 second of video. The default video is 8 seconds long. Here are some cropped sample images and videos you can use:
+        <br><br>
+        https://drive.google.com/drive/folders/1kZ1gCnpfU0BnpdU47pLM_TQ6RypDDqgw
+        <br><br>
+        
+        <div id="container">
+            
+            <div style="position: relative; left: 0; top: 0;">
+                <video id="gum" autoplay muted playsinline></video>
+                <div class="circle"/>
+            </div>
+            <video id="recorded" autoplay loop playsinline></video>
+
+            <div>
+              When recording, make sure your face is well lit and approximately matches the green circle! Once you are done recording, hit download to get your driving video, and upload it below.
+              <button id="record">Start Recording</button>
+              <button id="play" disabled>Play</button>
+              <button id="download" disabled>Download</button>
+            </div>
+        </div>
+        
+        <form method=post enctype=multipart/form-data>
+            <label for="source_image">Source image (face to copy, optional):</label>
+            <input type=file name=source_image id=source_image>
+            <br>
+            <label for="driving_video">Driving video (motion to copy, optional):</label>
+            <input type=file name=driving_video id=driving_video>
+            <br>
+            <input type=submit value=Create Clone!>
+        </form>
+        
+        <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    </body>
+</html>
