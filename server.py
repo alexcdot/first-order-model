@@ -23,30 +23,25 @@ import io
 from flask_cors import CORS
 import json
 from flask import Flask, flash, request, Response, redirect, \
-    url_for, send_from_directory, render_template
+    url_for, send_from_directory, render_template, session, g
 from werkzeug.utils import secure_filename
 import time
 from moviepy.editor import *
 from moviepy.video.fx.all import crop
 import ffmpeg
+import uuid
 
 """
 visualize results for test image
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
-from PIL import Image
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import os
-from torch.autograd import Variable
+import cv2
+import sys
+import tensorflow as tf
+import face_recognition
 
-import fer_pytorch.transforms as transforms
-from skimage import io
-from skimage.transform import resize
-from fer_pytorch.models import *
+from fer.model import predict, image_to_tensor, deepnn
 
 
 UPLOAD_FOLDER = './server_data'
@@ -138,62 +133,80 @@ def find_best_frame(source, driving, cpu=False):
     return frame_num
 
 
-cut_size = 44
-
-transform_test = transforms.Compose([
-    transforms.TenCrop(cut_size),
-    transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops])),
-])
-
 class_names = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+show_box = True
+
+face_x = tf.placeholder(tf.float32, [None, 2304])
+y_conv = deepnn(face_x)
+probs = tf.nn.softmax(y_conv)
+
+saver = tf.train.Saver()
+ckpt = tf.train.get_checkpoint_state('fer/ckpt')
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+sess = tf.Session(config=config)     
+saver.restore(sess, ckpt.model_checkpoint_path)
+
+def format_image(image):
+    # print(image.shape, image.dtype)
+    # image = image.astype('uint8') * 255
+    recog_faces = face_recognition.face_locations(image, model='cnn')
     
-net = VGG('VGG19')
-checkpoint = torch.load(os.path.join('fer_pytorch', 'FER2013_VGG19', 'PrivateTest_model.t7'))
-net.load_state_dict(checkpoint['net'])
-net.cuda()
-net.eval()
+    # top, right, bottom, left
+    faces = []
+    for (y1,x2,y2,x1) in recog_faces:
+        x, y, w, h = x1, y1, x2 - x1, y2 - y1
+        faces.append((x, y, w, h))
+    # None is no face found in image
+    if not len(faces) > 0:
+        return None, None
+    max_are_face = faces[0]
+    for face in faces:
+        if face[2] * face[3] > max_are_face[2] * max_are_face[3]:
+            max_are_face = face
+    # face to image
+    face_coor =  max_are_face
+    # turn gray
+    if len(image.shape) > 2 and image.shape[2] == 3:
+        gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    else:
+        gray_image = image
+    gray_image = gray_image[face_coor[1]:(face_coor[1] + face_coor[2]), face_coor[0]:(face_coor[0] + face_coor[3])]
+    # Resize image to network size
+    try:
+        gray_image = cv2.resize(gray_image, (48, 48), interpolation=cv2.INTER_CUBIC)
+    except Exception:
+        print("[+} Problem during resize")
+        return None, None
+    return  gray_image, face_coor
+    
+    
+def img_to_fer(frame):
+    detected_face, face_coor = format_image(frame)
+    if show_box and face_coor is not None:
+        [x,y,w,h] = face_coor
+        cv2.rectangle(frame, (x,y), (x+w,y+h), (255,0,0), 2)
 
-def rgb2gray(rgb):
-    return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
+    if detected_face is None:
+        print("No face spotted")
+        return 0, 0
+        
+    tensor = image_to_tensor(detected_face)
+    result = sess.run(probs, feed_dict={face_x: tensor})
 
-def img_to_fer(raw_img):
-    # raw_img = io.imread('fer_pytorch/images/1.jpg')
-    gray = rgb2gray(raw_img)
-    gray = resize(gray, (48,48), mode='symmetric').astype(np.uint8)
-
-    img = gray[:, :, np.newaxis]
-
-    img = np.concatenate((img, img, img), axis=2)
-    img = Image.fromarray(img)
-    inputs = transform_test(img)
-
-
-    ncrops, c, h, w = np.shape(inputs)
-
-    inputs = inputs.view(-1, c, h, w)
-    inputs = inputs.cuda()
-    inputs = Variable(inputs, volatile=True)
-    global net
-    outputs = net(inputs)
-
-    outputs_avg = outputs.view(ncrops, -1).mean(0)  # avg over crops
-
-    score = F.softmax(outputs_avg)
-    _, predicted = torch.max(outputs_avg.data, 0)
-
-    print("The Expression is %s" %str(class_names[int(predicted.cpu().numpy())]))
+    score = result[0]
+    predicted = np.argmax(score)
+    print("Image mean:", frame.mean())
+    print("The Expression is %s" %str(class_names[int(predicted)]))
     return score, predicted
 
 
 def video_to_fer(driving_video):
-    total_score = None
+    total_score = np.zeros(len(class_names))
     
     for img in driving_video:
         score, predicted = img_to_fer(img)
-        if total_score is None:
-            total_score = score
-        else:
-            total_score += score
+        total_score += score
     
     sorted_classes = sorted(list(zip(class_names, total_score)), key = lambda x: x[1], reverse=True)
     classes_by_score = {fer_class: score for fer_class, score in sorted_classes}
@@ -228,15 +241,18 @@ parser.set_defaults(cpu=False)
 opt = parser.parse_args([
     '--config', 'config/vox-adv-256.yaml',
     '--driving_video', 'data/trump_cropped_ice.mp4',
-    '--source_image', 'data/05.png',
+    '--source_image', 'data/trump.png',
     '--result_video', 'result_mona_trump_abs.mp4',
     '--checkpoint', 'vox-adv-cpk.pth.tar',
     '--adapt_scale', '--relative'])
 generator, kp_detector = load_checkpoints(config_path=opt.config, checkpoint_path=opt.checkpoint, cpu=opt.cpu)
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+app.config.from_mapping(
+    UPLOAD_FOLDER=UPLOAD_FOLDER,
+    SECRET_KEY='dev-swag-yolo',
+    SEND_FILE_MAX_AGE_DEFAULT=0
+)
 CORS(app)
 
 @app.after_request
@@ -251,109 +267,161 @@ def add_header(r):
     r.headers['Cache-Control'] = 'public, max-age=0'
     return r
 
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@app.before_request
+def load_logged_in_user():
+    user_id = session.get('user_id')
+    if user_id is None:
+        g.user = None
+    else:
+        g.user = session.get('reporter_status')
+
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'],
                                filename)
 
+# https://stackoverflow.com/questions/39382412/crop-center-portion-of-a-numpy-image/39382475
+def crop_square_center(img):
+    y, x = img.shape[:2]
+    if y == x:
+      return img
+
+    if y < x:
+      startx = x//2-(y//2)
+      return img[:,startx:startx+y]
+      
+    if x < y:
+      starty = y//2-(x//2)
+      return img[starty:starty+x,:]
+
+
+def run_cloning(source_image_path, driving_video_path):
+    global generator, kp_detector
+    fps = 12
+    target_resolution = (256, 256)
+
+    default_output_filename = 'default_fake_result.mp4'
+    default_output_path = os.path.join(app.config['UPLOAD_FOLDER'],
+                                       default_output_filename)
+    if source_image_path is None and driving_video_path is None \
+       and os.path.exists(default_output_path):
+        return default_output_filename
+
+    source_image = imageio.imread(source_image_path)
+    source_image = crop_square_center(source_image)
+    
+    sparser_driving_video = '.'.join(driving_video_path.split('.')[:-1]) + '_sparse.mp4'
+    (
+        ffmpeg
+        .input(driving_video_path)
+        .output(sparser_driving_video, r=12)
+        .overwrite_output()
+        .run()
+    )
+
+    orig_clip = VideoFileClip(sparser_driving_video)
+    (w, h) = orig_clip.size
+    cropped_clip = crop(orig_clip, width=h, height=h, x_center=w/2, y_center=h/2)
+    resized_clip = cropped_clip.resize(width=target_resolution[0])
+
+    resized_clip = resized_clip.set_fps(fps)
+    # resized_clip.write_videofile('resizing_test.mp4')
+
+    orig_audio = resized_clip.audio
+    driving_video = resized_clip.iter_frames()
+
+    classes_by_score = video_to_fer(driving_video)
+
+    # reset driving video
+    driving_video = resized_clip.iter_frames()
+    source_image = resize(source_image, target_resolution)[..., :3]
+    driving_video = [resize(frame, target_resolution)[..., :3] for frame in driving_video]
+
+    predictions = make_animation(source_image, driving_video, generator, kp_detector, relative=opt.relative, adapt_movement_scale=opt.adapt_scale, cpu=opt.cpu)
+
+    top3_classes = '_'.join(list(classes_by_score.keys())[:3])
+    output_filename = 'fake_result_' + str(int(time.time())) + '_' + top3_classes + '.mp4'
+    result_video_path = os.path.join(app.config['UPLOAD_FOLDER'], output_filename)
+
+    # print('predictions shape', len(predictions), predictions[0].shape, predictions[0].dtype)
+    new_video = ImageSequenceClip([img_as_ubyte(frame) for frame in predictions], fps=fps)
+    # H x W x 3 format
+    new_video = new_video.set_audio(orig_audio)
+    new_video.write_videofile(result_video_path, audio_codec='aac')
+
+    return output_filename
+
+
+reporter_needs = {
+    'john roberts': {'Happy'},
+    'jim acoasta': {'Angry', 'Fear', 'Disgust'}
+}
+
 @app.route('/generate-fake', methods=['GET', 'POST'])
 def generate_fake():
     if request.method == 'POST':
+        if len(request.form) > 0:
+            req_data = request.form
+            print(req_data)
+            response_link = req_data.get('response_link')
+            reporter_name = req_data.get('reporter_name')
+            
+            if 'user_id' not in session or not hasattr(g, 'user'):
+                session['user_id'] = str(uuid.uuid4())
+            
+            if 'reporter_status' not in session:
+                session['reporter_status'] = {}
+
+            if response_link is not None and reporter_name is not None \
+               and response_link.split('.')[-1] == 'mp4' and \
+               reporter_name in reporter_needs:
+                key_emotions = response_link.split('.')[-2].split('_')[-3:]
+                
+                session['reporter_status'][reporter_name] = False
+                
+                print(key_emotions, reporter_needs[reporter_name])
+                for emotion in key_emotions:
+                    if emotion in reporter_needs[reporter_name]:
+                        session['reporter_status'][reporter_name] = True
+                        break                    
+            else:
+                session['reporter_status'][reporter_name] = False
+            
+            return render_template('base_client.html')
         
         global generator, kp_detector
         
         req_data = request.files
-        # if request.is_json:
-        #     req_data = request.get_json()
-        # else:
-        #     data = request.data
-        #     req_data = json.loads(data)
         source_image = req_data.get('source_image')
         driving_video = req_data.get('driving_video')
 
         print(source_image, source_image.filename)
         print(driving_video, driving_video.filename)
 
-        source_image_path = None
-        driving_video_path = None
+        source_image_path = opt.source_image
+        driving_video_path = opt.driving_video
         
         if source_image and allowed_file(source_image.filename):
             filename = secure_filename(source_image.filename)
-            source_image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            source_image_path = os.path.join('user_data', filename)
             source_image.save(source_image_path)
-            opt.source_image = source_image_path
         
         if driving_video and allowed_file(driving_video.filename):
             filename = secure_filename(driving_video.filename)
-            driving_video_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            driving_video_path = os.path.join('user_data', filename)
             driving_video.save(driving_video_path)
-            opt.driving_video = driving_video_path
         
-        default_output_filename = 'default_fake_result.mp4'
-        default_output_path = os.path.join(app.config['UPLOAD_FOLDER'],
-                                           default_output_filename)
-        if source_image_path is None and driving_video_path is None \
-           and os.path.exists(default_output_path):
-            return redirect(url_for('uploaded_file',
-                                    filename=default_output_filename))
-
-        source_image = imageio.imread(opt.source_image)
-        fps = 12
-        target_resolution = (256, 256)
-        sparser_driving_video = '.'.join(opt.driving_video.split('.')[:-1]) + '_sparse.mp4'
-        (
-            ffmpeg
-            .input(opt.driving_video)
-            .output(sparser_driving_video, r=12)
-            .overwrite_output()
-            .run()
-        )
-        
-        orig_clip = VideoFileClip(sparser_driving_video)
-        (w, h) = orig_clip.size
-        cropped_clip = crop(orig_clip, width=h, height=h, x_center=w/2, y_center=h/2)
-        resized_clip = cropped_clip.resize(width=target_resolution[0])
-
-        resized_clip = resized_clip.set_fps(fps)
-        resized_clip.write_videofile('resizing_test.mp4')
-        
-        orig_audio = resized_clip.audio
-        driving_video = resized_clip.iter_frames()
-
-        source_image = resize(source_image, target_resolution)[..., :3]
-        driving_video = [resize(frame, target_resolution)[..., :3] for frame in driving_video]
-
-        predictions = make_animation(source_image, driving_video, generator, kp_detector, relative=opt.relative, adapt_movement_scale=opt.adapt_scale, cpu=opt.cpu)
-        
-        classes_by_score = video_to_fer(driving_video)
-        
-        output_filename = 'fake_result_' + str(int(time.time())) + '_' + list(classes_by_score.keys())[0] + '.mp4'
-        opt.result_video = os.path.join(app.config['UPLOAD_FOLDER'], output_filename)
-        
-        # print('predictions shape', len(predictions), predictions[0].shape, predictions[0].dtype)
-        new_video = ImageSequenceClip([img_as_ubyte(frame) for frame in predictions], fps=fps)
-        # H x W x 3 format
-        new_video = new_video.set_audio(orig_audio)
-        new_video.write_videofile(opt.result_video)
-        
-        # imageio.mimsave(opt.result_video, [img_as_ubyte(frame) for frame in predictions], fps=fps)
-
+        output_filename = run_cloning(source_image_path, driving_video_path)
         return redirect(url_for('uploaded_file',
                                 filename=output_filename))
-        
-#         if 'data:image/jpeg;base64,' in image:
-#             image = image[len("data:image/jpeg;base64,"):]
 
-#         img = asarray(Image.open(io.BytesIO(base64.b64decode(image))))
-
-#         response = {'message': 'image received', 'embedding': [1,2,3]}
-#         response_pickled = json.dumps(response)
-#         return Response(response=response_pickled, status=200,
-#                         mimetype="application/json")
     return render_template('base_client.html')
 
 if __name__ == '__main__':

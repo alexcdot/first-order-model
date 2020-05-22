@@ -34,23 +34,31 @@
 
     <body>
         <h1>Create video clones!</h1>
-        
-        
-        By default, the source image is of Mona Lisa and the driving video is of Donald Trump - so you can hit the "Upload" button to see a cloned video without uploading anything yourself. If you do upload, make sure the images and driving video are cropped to the head. It will take 1.5 seconds to generate every 1 second of video. The default video is 8 seconds long. Here are some cropped sample images and videos you can use:
-        <br><br>
-        https://drive.google.com/drive/folders/1kZ1gCnpfU0BnpdU47pLM_TQ6RypDDqgw
-        <br><br>
-        
+        <p>Modern technology has allowed us to animate images of people's faces with a video of someone else! So you can get you, or someone else... to kind of look like they are saying anything!
+            <a href="https://github.com/AliaksandrSiarohin/first-order-model">(Credits for the model and gif here)</a>
+            Now, you have to power to create these yourself - but be responsbile with its use please!
+        </p>
+        <img src="https://raw.githubusercontent.com/AliaksandrSiarohin/first-order-model/master/sup-mat/vox-teaser.gif">
+        <p>By default, on my website, I use a source image is of Donald Trump and the driving video is of Donald Trump (in a different time and place). If you hit the "Upload" button without attaching any files, you can see a cloned video example.
+        </p>
+        <p>
+        When you upload images, make sure the head in the images and driving video roughly matches the size of the green oval below. It will take 1.5 seconds to generate every 1 second of video, and the default video is 8 seconds long. Here are some cropped sample images and videos you can use:
+        <a href="https://drive.google.com/drive/folders/1kZ1gCnpfU0BnpdU47pLM_TQ6RypDDqgw" target="_blank">link</a>
+        <br>
+        </p>
+        <h1>Record your driving video here!</h1>
         <div id="container">
             
             <div style="position: relative; left: 0; top: 0;">
                 <video id="gum" autoplay muted playsinline></video>
                 <div class="circle"/>
             </div>
-            <video id="recorded" autoplay loop playsinline></video>
+            <video id="recorded" autoplay playsinline></video>
 
             <div>
-              When recording, make sure your face is well lit and approximately matches the green circle! Once you are done recording, hit download to get your driving video, and upload it below.
+              <p>Note: Recording is not supported on mobile or Microsoft Edge. <strong>When recording, make sure your face is well lit and fills the green oval! It's preferable if you have uncluttered, uniform background as well.</strong> Once you are done recording, hit download to get your driving video, and upload it below.
+              </p>
+              <br>
               <button id="record">Start Recording</button>
               <button id="play" disabled>Play</button>
               <button id="download" disabled>Download</button>
@@ -64,8 +72,78 @@
             <label for="driving_video">Driving video (motion to copy, optional):</label>
             <input type=file name=driving_video id=driving_video>
             <br>
-            <input type=submit value=Create Clone!>
+            <input type=submit value="Create Clone!">
         </form>
+        
+        <br>
+        <br>
+        <br>
+        
+        <h1>On that note, Mr. Trump, your press conference is starting!</h1>
+        <p>
+        Please listen to these real-life reporter's questions, and give your most genuine responses. If your facial emotions don't match up to what we would expect from Mr. Trump, then people will start getting suspicious. If you are convincing, you'll definitely hear about it! Remember to only submit links of videos generated on this website! 
+        </p>
+        <video width="420" height="420" controls>
+            <source src="https://clone.verafy.me/uploads/fake_result_1590113709_Fear_Happy_Angry.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        
+        <form method=post enctype=multipart/form-data>
+            <label for="reporter_name">Reporter Name (do not change):</label>
+            <input type=text name=reporter_name id=reporter_name value="john roberts">
+            <br>
+            <label for="response_link">Link to your video response:</label>
+            <input type=text name=response_link id=response_link>
+            <br>
+            <input type=submit value="Crush it!">
+        </form>
+        
+        <br>
+        
+        <p>
+        {% if g.user and g.user.get('john roberts') %}
+            {% if g.user['john roberts'] %}
+              <span>Delivered a convincing delivery? Absolutely! Amazing Mr. Trump, thanks for again for standing up to illegal aliens, within our galaxy and without!</span>
+            {% else %}
+              <span>Delivered a convincing delivery? Not at all, and the American people are getting nervous.</span>
+            {% endif %}
+        {% else %}
+          <span>Delivered a convincing delivery? Let's find out!</span>
+        {% endif %}
+        </p>
+        
+        <br>
+        <h1>Next question, from CNN all the way in the back!</h1>
+        
+        <video width="420" height="420" controls playsinline>
+            <source src="https://clone.verafy.me/uploads/fake_result_1590114628_Fear_Sad_Angry.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        
+        <form method=post enctype=multipart/form-data>
+            <label for="reporter_name">Reporter Name (do not change):</label>
+            <input type=text name=reporter_name id=reporter_name value="jim acoasta">
+            <br>
+            <label for="response_link">Link to your video response:</label>
+            <input type=text name=response_link id=response_link>
+            <br>
+            <input type=submit value="Throw it down!">
+        </form>
+        
+        <br>
+        
+        <p>
+        {% if g.user and g.user.get('jim acoasta') %}
+            {% if g.user['jim acoasta'] %}
+              <span>Delivered a convincing delivery? Yes, you really showed the lamestream media their place!</span>
+            {% else %}
+              <span>Delivered a convincing delivery? Not at all, and the American people are getting anxious.</span>
+            {% endif %}
+        {% else %}
+          <span>Delivered a convincing delivery? Let's find out!</span>
+        {% endif %}
+        
+        </p>
         
         <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 

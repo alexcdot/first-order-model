@@ -1,3 +1,9 @@
+*.jpeg
+*.ipynb_checkpoints*
+*.mp4
+*.webm
+*.png
+*.jpg
 /.vscode
 __pycache__
 /venv

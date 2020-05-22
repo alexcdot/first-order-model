@@ -29,9 +29,10 @@ var recordButton = document.querySelector('button#record');
 var playButton = document.querySelector('button#play');
 var downloadButton = document.querySelector('button#download');
 
-var mimeTypeCodecs = 'video/mp4';
-var fileExtension = '.mp4';
-var mimeType = 'video/mp4';
+var mimeTypePlayback = 'video/webm; codecs="vp8"';
+var mimeTypeRecording = 'video/webm; codecs="vp9"';
+var fileExtension = '.webm';
+var mimeType = 'video/webm';
 
 recordButton.onclick = toggleRecording;
 playButton.onclick = play;
@@ -72,7 +73,7 @@ function errorCallback(error) {
 function handleSourceOpen(event) {
   console.log('MediaSource opened');
   // sourceBuffer = mediaSource.addSourceBuffer('video/webm; codecs="vp8"');
-  sourceBuffer = mediaSource.addSourceBuffer(mimeType);
+  sourceBuffer = mediaSource.addSourceBuffer(mimeTypePlayback);
   console.log('Source buffer: ', sourceBuffer);
 }
 
@@ -100,24 +101,30 @@ function toggleRecording() {
 // The nested try blocks will be simplified when Chrome 47 moves to Stable
 function startRecording() {
   // var options = {mimeType: 'video/webm;codecs=vp9', bitsPerSecond: 100000};
-  var options = {mimeType: mimeType, bitsPerSecond: 100000};
+  var options = {mimeType: mimeTypeRecording, bitsPerSecond: 1000000};
   recordedBlobs = [];
   try {
     mediaRecorder = new MediaRecorder(window.stream, options);
   } catch (e0) {
     console.log('Unable to create MediaRecorder with options Object: ', options, e0);
     try {
-      options = {mimeType: 'video/webm;codecs=vp8', bitsPerSecond: 100000};
+        options = {bitsPerSecond: 1000000};
       mediaRecorder = new MediaRecorder(window.stream, options);
     } catch (e1) {
       console.log('Unable to create MediaRecorder with options Object: ', options, e1);
       try {
-        options = 'video/mp4';
+      options = {mimeType: 'video/mp4', bitsPerSecond: 1000000};
         mediaRecorder = new MediaRecorder(window.stream, options);
       } catch (e2) {
-        alert('MediaRecorder is not supported by this browser.');
-        console.error('Exception while creating MediaRecorder:', e2);
-        return;
+        console.log('Unable to create MediaRecorder with options Object: ', options, e2); 
+        try {
+        options = {mimeType: 'video/webm; codecs="opus,vp8"', bitsPerSecond: 1000000};
+          mediaRecorder = new MediaRecorder(window.stream, options);
+        } catch (e3) {
+          alert('MediaRecorder is not supported by this browser.');
+          console.error('Exception while creating MediaRecorder:', e3);
+          return;
+        }
       }
     }
   }
