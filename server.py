@@ -1,6 +1,33 @@
 import matplotlib
 matplotlib.use('Agg')
 import os, sys
+import random
+from filelock import FileLock
+
+# Make sure the processes use different GPUs
+
+worker_id_file = "current_worker_id.txt"
+worker_id_lock_file = "current_worker_id.txt.lock"
+
+num_processes = 8
+current_worker_id = random.randint(0, num_processes - 1)
+
+lock = FileLock(worker_id_lock_file, timeout=10)
+
+with lock:
+    if os.path.exists(worker_id_file):
+        with open(worker_id_file, 'r') as f:
+            lines = f.read().split()
+            if len(lines) > 0:
+                try:
+                    current_worker_id = (int(lines[-1]) + 1) % num_processes
+                except Exception as e:
+                    print('Error in getting worker id:', e)
+    with open(worker_id_file, 'a') as f:
+        f.write('\n' + str(current_worker_id))
+
+os.environ['CUDA_VISIBLE_DEVICES'] = str(current_worker_id)
+
 import yaml
 from argparse import ArgumentParser
 from tqdm import tqdm
@@ -30,6 +57,7 @@ from moviepy.editor import *
 from moviepy.video.fx.all import crop
 import ffmpeg
 import uuid
+import re
 
 """
 visualize results for test image
@@ -45,7 +73,8 @@ from fer.model import predict, image_to_tensor, deepnn
 
 
 UPLOAD_FOLDER = './server_data'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'webm'}
+# Unnecessary, taken care of on frontend
+# ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'webm'}
 
 
 if sys.version_info[0] < 3:
@@ -132,20 +161,23 @@ def find_best_frame(source, driving, cpu=False):
             frame_num = i
     return frame_num
 
+run_fer = (os.environ.get('RUN_FER') != '0')
 
-class_names = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
-show_box = True
+if run_fer:
+    class_names = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+    show_box = True
 
-face_x = tf.placeholder(tf.float32, [None, 2304])
-y_conv = deepnn(face_x)
-probs = tf.nn.softmax(y_conv)
+    face_x = tf.placeholder(tf.float32, [None, 2304])
+    y_conv = deepnn(face_x)
+    probs = tf.nn.softmax(y_conv)
 
-saver = tf.train.Saver()
-ckpt = tf.train.get_checkpoint_state('fer/ckpt')
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
-sess = tf.Session(config=config)     
-saver.restore(sess, ckpt.model_checkpoint_path)
+    saver = tf.train.Saver()
+    ckpt = tf.train.get_checkpoint_state('fer/ckpt')
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    sess = tf.Session(config=config)     
+    saver.restore(sess, ckpt.model_checkpoint_path)
+
 
 def format_image(image):
     # print(image.shape, image.dtype)
@@ -201,10 +233,18 @@ def img_to_fer(frame):
     return score, predicted
 
 
-def video_to_fer(driving_video):
+def video_to_fer(driving_video, max_frames=50):
     total_score = np.zeros(len(class_names))
+    # unpack generators
+    driving_video = [img for img in driving_video]
+    print("VIDEO SIZE:", driving_video[0].shape)
+    indices = list(range(len(driving_video)))
     
-    for img in driving_video:
+    if len(driving_video) > max_frames:
+        indices = np.random.choice(len(driving_video), max_frames)
+    
+    for i in indices:
+        img = driving_video[i]
         score, predicted = img_to_fer(img)
         total_score += score
     
@@ -241,8 +281,8 @@ parser.set_defaults(cpu=False)
 opt = parser.parse_args([
     '--config', 'config/vox-adv-256.yaml',
     '--driving_video', 'data/trump_cropped_ice.mp4',
-    '--source_image', 'data/trump.png',
-    '--result_video', 'result_mona_trump_abs.mp4',
+    '--source_image', 'data/robot_trump.jpg',
+    '--result_video', 'result_robot_trump.mp4',
     '--checkpoint', 'vox-adv-cpk.pth.tar',
     '--adapt_scale', '--relative'])
 generator, kp_detector = load_checkpoints(config_path=opt.config, checkpoint_path=opt.checkpoint, cpu=opt.cpu)
@@ -269,8 +309,9 @@ def add_header(r):
 
 
 def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename
+    # return '.' in filename and \
+    #        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @app.before_request
@@ -280,6 +321,8 @@ def load_logged_in_user():
         g.user = None
     else:
         g.user = session.get('reporter_status')
+        g.group_name = session.get('group_name')
+        g.submission_link = session.get('submission_link')
 
 
 @app.route('/uploads/<filename>')
@@ -291,53 +334,73 @@ def uploaded_file(filename):
 def crop_square_center(img):
     y, x = img.shape[:2]
     if y == x:
-      return img
+        return img
 
     if y < x:
-      startx = x//2-(y//2)
-      return img[:,startx:startx+y]
+        startx = x//2-(y//2)
+        return img[:,startx:startx+y]
       
     if x < y:
-      starty = y//2-(x//2)
-      return img[starty:starty+x,:]
+        starty = y//2-(x//2)
+        return img[starty:starty+x,:]
 
 
-def run_cloning(source_image_path, driving_video_path):
-    global generator, kp_detector
-    fps = 12
-    target_resolution = (256, 256)
-
-    default_output_filename = 'default_fake_result.mp4'
-    default_output_path = os.path.join(app.config['UPLOAD_FOLDER'],
-                                       default_output_filename)
-    if source_image_path is None and driving_video_path is None \
-       and os.path.exists(default_output_path):
-        return default_output_filename
-
-    source_image = imageio.imread(source_image_path)
-    source_image = crop_square_center(source_image)
-    
+def adjust_clip(driving_video_path, fps, t, target_resolution):
     sparser_driving_video = '.'.join(driving_video_path.split('.')[:-1]) + '_sparse.mp4'
     (
         ffmpeg
         .input(driving_video_path)
-        .output(sparser_driving_video, r=12)
+        .output(sparser_driving_video, r=fps, t=t, acodec="aac", vcodec="libx264")
         .overwrite_output()
         .run()
     )
 
     orig_clip = VideoFileClip(sparser_driving_video)
     (w, h) = orig_clip.size
-    cropped_clip = crop(orig_clip, width=h, height=h, x_center=w/2, y_center=h/2)
-    resized_clip = cropped_clip.resize(width=target_resolution[0])
+    new_dim = min(w, h)
+    print("og size:", w, h)
 
+    cropped_clip = crop(orig_clip, width=new_dim, height=new_dim, x_center=w/2, y_center=h/2)
+    resized_clip = cropped_clip.resize(width=target_resolution[0])
+    return resized_clip
+
+    
+def run_cloning(source_image_path, driving_video_path, result_video_path=None,
+                run_fer=run_fer, fps=12, t=30, resized_clip=None):
+    global generator, kp_detector
+    target_resolution = (256, 256)
+
+    source_image = imageio.imread(source_image_path)
+    source_image = crop_square_center(source_image)
+    
+    if resized_clip is None:
+        sparser_driving_video = '.'.join(driving_video_path.split('.')[:-1]) \
+            + '_' + str(int(time.time())) + '_sparse.mp4'
+        (
+            ffmpeg
+            .input(driving_video_path)
+            .output(sparser_driving_video, r=fps, t=t, acodec="aac", vcodec="libx264")
+            .overwrite_output()
+            .run()
+        )
+
+        orig_clip = VideoFileClip(sparser_driving_video)
+        (w, h) = orig_clip.size
+        new_dim = min(w, h)
+        print("og size:", w, h)
+
+        cropped_clip = crop(orig_clip, width=new_dim, height=new_dim, x_center=w/2, y_center=h/2)
+        resized_clip = cropped_clip.resize(width=target_resolution[0])
+
+    print("resized clip", resized_clip.size)
     resized_clip = resized_clip.set_fps(fps)
     # resized_clip.write_videofile('resizing_test.mp4')
 
     orig_audio = resized_clip.audio
     driving_video = resized_clip.iter_frames()
 
-    classes_by_score = video_to_fer(driving_video)
+    if run_fer:
+        classes_by_score = video_to_fer(driving_video)
 
     # reset driving video
     driving_video = resized_clip.iter_frames()
@@ -345,10 +408,17 @@ def run_cloning(source_image_path, driving_video_path):
     driving_video = [resize(frame, target_resolution)[..., :3] for frame in driving_video]
 
     predictions = make_animation(source_image, driving_video, generator, kp_detector, relative=opt.relative, adapt_movement_scale=opt.adapt_scale, cpu=opt.cpu)
+    
+    if result_video_path is None:
+        output_filename = 'mind_theft_' + str(int(time.time()))
+        if run_fer:
+            top3_classes = '_'.join(list(classes_by_score.keys())[:3])
+            output_filename += '_' + top3_classes
 
-    top3_classes = '_'.join(list(classes_by_score.keys())[:3])
-    output_filename = 'fake_result_' + str(int(time.time())) + '_' + top3_classes + '.mp4'
-    result_video_path = os.path.join(app.config['UPLOAD_FOLDER'], output_filename)
+        output_filename += '.mp4'
+        result_video_path = os.path.join(app.config['UPLOAD_FOLDER'], output_filename)
+    else:
+        output_filename = result_video_path.split('/')[-1]
 
     # print('predictions shape', len(predictions), predictions[0].shape, predictions[0].dtype)
     new_video = ImageSequenceClip([img_as_ubyte(frame) for frame in predictions], fps=fps)
@@ -364,36 +434,57 @@ reporter_needs = {
     'jim acoasta': {'Angry', 'Fear', 'Disgust'}
 }
 
+
 @app.route('/generate-fake', methods=['GET', 'POST'])
 def generate_fake():
+    # Just redirect.
+    return redirect('/')
+
+@app.route('/viva-la-revolution', methods=['GET'])
+def revolution():
+    return render_template('revolution.html')
+
+@app.route('/', methods=['GET', 'POST'])
+def general():
     if request.method == 'POST':
-        if len(request.form) > 0:
+        if len(request.form) > 0 and request.form.get('reporter_name'):
             req_data = request.form
             print(req_data)
             response_link = req_data.get('response_link')
             reporter_name = req_data.get('reporter_name')
             
-            if 'user_id' not in session or not hasattr(g, 'user'):
+            if 'user_id' not in session:
                 session['user_id'] = str(uuid.uuid4())
             
             if 'reporter_status' not in session:
                 session['reporter_status'] = {}
 
-            if response_link is not None and reporter_name is not None \
-               and response_link.split('.')[-1] == 'mp4' and \
-               reporter_name in reporter_needs:
-                key_emotions = response_link.split('.')[-2].split('_')[-3:]
-                
-                session['reporter_status'][reporter_name] = False
-                
-                print(key_emotions, reporter_needs[reporter_name])
-                for emotion in key_emotions:
-                    if emotion in reporter_needs[reporter_name]:
-                        session['reporter_status'][reporter_name] = True
-                        break                    
-            else:
-                session['reporter_status'][reporter_name] = False
-            
+            # Set it to false by default
+            if reporter_name is not None and reporter_name in reporter_needs:
+                session.modified = True
+                if reporter_name not in session['reporter_status'] or \
+                   type(session['reporter_status'][reporter_name]) is bool:
+                    session['reporter_status'][reporter_name] = {
+                        'is_convinced': False,
+                        'response_link': None,
+                    }
+                session['reporter_status'][reporter_name]['is_convinced'] = False
+
+                if response_link.split('.')[-1] == 'mp4' and \
+                   reporter_name in reporter_needs and \
+                   os.path.exists(
+                      os.path.join(app.config['UPLOAD_FOLDER'], response_link.split('/')[-1])
+                   ):
+                    key_emotions = response_link.split('.')[-2].split('_')[-3:]
+                    session['reporter_status'][reporter_name]['response_link'] = response_link
+                    
+                    print(key_emotions, reporter_needs[reporter_name])
+                    for emotion in key_emotions:
+                        if emotion in reporter_needs[reporter_name]:
+                            session['reporter_status'][reporter_name]['is_convinced'] = True
+                            break
+
+            print("Session:", session)
             return render_template('base_client.html')
         
         global generator, kp_detector
@@ -401,9 +492,90 @@ def generate_fake():
         req_data = request.files
         source_image = req_data.get('source_image')
         driving_video = req_data.get('driving_video')
+        broadcast_video = req_data.get('broadcast_video')
+        concat_files = req_data.getlist('concat_files')
+        
+        form_data = request.form
+        headline = form_data.get('headline')
+        group_name = form_data.get('group_name')
 
-        print(source_image, source_image.filename)
-        print(driving_video, driving_video.filename)
+        # Submit broadcast video
+        if broadcast_video is not None and broadcast_video.filename is not None:
+            print("headline, group id and broadcast video", headline, group_name, broadcast_video)
+            video_name = 'breaking_news_'
+            if headline:
+                headline = secure_filename(headline)
+                video_name += headline + '_'
+                
+            if group_name:
+                group_name = secure_filename(group_name)
+                video_name += group_name + '_'
+
+            video_name += str(int(time.time())) + '.mp4'
+            video_path = os.path.join(app.config['UPLOAD_FOLDER'], video_name)
+            broadcast_video.save(video_path)
+            
+            # Make this a new template site? Or let it unlock something?
+            base_url = 'https://clone.verafy.me/uploads/'
+            session['submission_link'] = os.path.join(
+                base_url, video_name
+            )
+            session['group_name'] = group_name
+            session.modified = True
+            return redirect('/viva-la-revolution')
+            # redirect(url_for('uploaded_file', filename=video_name))
+        
+        # Run concatenation of video files
+        
+        if len(concat_files) > 1:
+            print('files to concatenate:', concat_files)
+            valid_paths = []
+            valid_in_files = []
+
+            # filter and save files
+            for file in concat_files:
+                if file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    video_path = os.path.join('user_data', 'concat_' + filename)
+                    file.save(video_path)
+                    valid_paths.append(video_path)
+                    in_file = ffmpeg.input(video_path)
+                    # This stuff didn't work
+                    # example: scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2
+                    # scaled_video = in_file.video.filter(
+                    #    'scale', '256:256', 'force_original_aspect_ratio=decrease,pad=256:256:(ow-iw)/2:(oh-ih)/2'
+                    # )
+                    valid_in_files.extend([in_file.video, in_file.audio])
+            
+            # paths_file = os.path.join('user_data', 'concat_' + str(int(time.time())) + '.txt')
+            # with open(paths_file, 'w+') as f:
+            #    for path in valid_paths:
+            #        valid_in_files.
+            #        f.write("file '" + path + "'\n")
+            concatenated_name = 'breaking_news_' + str(int(time.time())) + '.mp4' 
+            concatenated_path = os.path.join(
+                app.config['UPLOAD_FOLDER'], concatenated_name
+            )
+            (
+                ffmpeg
+                .concat(*valid_in_files, v=1, a=1)
+                .output(concatenated_path, r=12, acodec="aac", vcodec="libx264")
+                .run()
+            )
+            return redirect(url_for('uploaded_file',
+                                    filename=concatenated_name))
+
+        print('source image:', source_image)
+        print('driving video:', driving_video)
+        
+        default_output_filename = 'fake_result_1590191838_Sad_Fear_Neutral.mp4'
+        default_output_path = os.path.join(app.config['UPLOAD_FOLDER'],
+                                           default_output_filename)
+        if (source_image is None or source_image.filename is None or len(source_image.filename) == 0) and \
+           (driving_video is None or driving_video.filename is None or len(driving_video.filename) == 0) and \
+           os.path.exists(default_output_path):
+            return redirect(url_for('uploaded_file',
+                                filename=default_output_filename))
 
         source_image_path = opt.source_image
         driving_video_path = opt.driving_video

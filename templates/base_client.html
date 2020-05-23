@@ -22,7 +22,7 @@
 
         <base target="_blank">
 
-        <title>Clone Generator</title>
+        <title>Mind Controller</title>
 
         <!--
         <link rel="icon" sizes="192x192" href="../../../images/webrtc-icon-192x192.png">
@@ -33,22 +33,17 @@
     </head>
 
     <body>
-        <h1>Create video clones!</h1>
-        <p>Modern technology has allowed us to animate images of people's faces with a video of someone else! So you can get you, or someone else... to kind of look like they are saying anything!
-            <a href="https://github.com/AliaksandrSiarohin/first-order-model">(Credits for the model and gif here)</a>
-            Now, you have to power to create these yourself - but be responsbile with its use please!
-        </p>
-        <img src="https://raw.githubusercontent.com/AliaksandrSiarohin/first-order-model/master/sup-mat/vox-teaser.gif">
-        <p>By default, on my website, I use a source image is of Donald Trump and the driving video is of Donald Trump (in a different time and place). If you hit the "Upload" button without attaching any files, you can see a cloned video example.
-        </p>
-        <p>
-        When you upload images, make sure the head in the images and driving video roughly matches the size of the green oval below. It will take 1.5 seconds to generate every 1 second of video, and the default video is 8 seconds long. Here are some cropped sample images and videos you can use:
-        <a href="https://drive.google.com/drive/folders/1kZ1gCnpfU0BnpdU47pLM_TQ6RypDDqgw" target="_blank">link</a>
-        <br>
-        </p>
-        <h1>Record your driving video here!</h1>
         <div id="container">
-            
+            <h1>Use mind control for good!</h1>
+            <p>Welcome to the Lab. Here, we've been developing a technology not even the FBC was able to accomplish. <b>Wireless mind-jacks.</b> Our recent discovery of the ability for 5G to transmit and spread mind-viruses has enabled us to take control of other people's minds without them even knowing. <b>Please be responsbile with the use of this dangerous technology!</b>
+                <br><br>
+            Our plan is to expose Project Hyperskelion for what it is by getting the President to deliver our message on live television, but before that, we will do a bit of practice to make sure reporters find us authentic. To get started, just upload the image of someone you'd like to control (or not, and use the default image), and then a driving video of yourself saying the things you want them to say.
+                <a href="https://github.com/AliaksandrSiarohin/first-order-model">(Credits for the original work here)</a>
+            </p>
+            <img src="https://clone.verafy.me/uploads/vox-teaser-min.gif">
+            <br>
+            <br>
+            <h1>Record your driving video here!</h1>
             <div style="position: relative; left: 0; top: 0;">
                 <video id="gum" autoplay muted playsinline></video>
                 <div class="circle"/>
@@ -56,95 +51,164 @@
             <video id="recorded" autoplay playsinline></video>
 
             <div>
-              <p>Note: Recording is not supported on mobile or Microsoft Edge. <strong>When recording, make sure your face is well lit and fills the green oval! It's preferable if you have uncluttered, uniform background as well.</strong> Once you are done recording, hit download to get your driving video, and upload it below.
-              </p>
-              <br>
-              <button id="record">Start Recording</button>
-              <button id="play" disabled>Play</button>
-              <button id="download" disabled>Download</button>
+                <p><b>Make sure your video is turned off on Zoom! When recording, make sure your face is well lit and fills the green oval! It's preferable if you have uncluttered, uniform background as well.</b> Note: Recording is not supported on iOS or Internet Explorer, but you can upload your own selfie/webcam videos. Once you are done recording, you must <b>download to get your driving video, and upload it before running mind control.</b>
+                </p>
+                <br>
+                <button id="toggleCamera">Toggle Webcam</button>
+                <button id="record">Start Recording</button>
+                <button id="play" disabled>Play</button>
+                <button id="download" disabled>Download</button>
             </div>
+            <p>By default, we use a source image of Bionically-enhanced Trump and a driving video from Donald Trump in the past. If you hit the "Upload" button without uploading any files, you will see this this example video.
+            </p>
+                
+            <video width="420" height="420" controls>
+                <source src="https://clone.verafy.me/uploads/fake_result_1590191838_Sad_Fear_Neutral.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <p>
+            Before you upload, make sure the head in the images and driving video roughly matches the size of the green oval below. <b>It will take 2 seconds to generate every 1 second of video, so be patient!</b>Videos will be cropped to the first 30 seconds, and the default video is 8 seconds long. <a href="https://drive.google.com/drive/folders/1kZ1gCnpfU0BnpdU47pLM_TQ6RypDDqgw" target="_blank">Here are some cropped sample images you can use.</a>
+                <br>
+            </p>
         </div>
         
         <form method=post enctype=multipart/form-data>
-            <label for="source_image">Source image (face to copy, optional):</label>
-            <input type=file name=source_image id=source_image>
+            <label for="source_image">Optional source image (face to copy, leave empty to use default):</label>
+            <input type=file name=source_image id=source_image accept="image/*">
             <br>
-            <label for="driving_video">Driving video (motion to copy, optional):</label>
-            <input type=file name=driving_video id=driving_video>
-            <br>
-            <input type=submit value="Create Clone!">
+            <label for="driving_video">Optional driving video (motion to copy, leave empty to use default):</label>
+            <input type=file name=driving_video id=driving_video accept="video/*">
+            <br><br>
+            <input class="submit-input" type=submit value="Run mind control!">
         </form>
+
+        <br>
+        <br>
         
-        <br>
-        <br>
-        <br>
-        
-        <h1>On that note, Mr. Trump, your press conference is starting!</h1>
+        <h1>On that note, Mr. Trump, your press conference is starting! Let's hear it from Fox News.</h1>
         <p>
-        Please listen to these real-life reporter's questions, and give your most genuine responses. If your facial emotions don't match up to what we would expect from Mr. Trump, then people will start getting suspicious. If you are convincing, you'll definitely hear about it! Remember to only submit links of videos generated on this website! 
+        Please listen to these real-life reporter's questions, and give your most genuine responses. If your facial emotions don't match up to what we would expect from Mr. Trump, then people will start getting suspicious. If you are convincing, we'll let you know! Remember to only submit links of videos generated on this website! 
         </p>
         <video width="420" height="420" controls>
-            <source src="https://clone.verafy.me/uploads/fake_result_1590113709_Fear_Happy_Angry.mp4" type="video/mp4">
+            <source src="https://clone.verafy.me/uploads/mind_thief_log_1590252393_Sad_Happy_Neutral.mp4" type="video/mp4">
             Your browser does not support the video tag.
         </video>
         
         <form method=post enctype=multipart/form-data>
-            <label for="reporter_name">Reporter Name (do not change):</label>
-            <input type=text name=reporter_name id=reporter_name value="john roberts">
+            <label hidden for="reporter_name">Reporter Name (do not change):</label>
+            <input hidden type=text name=reporter_name id=reporter_name value="john roberts">
             <br>
-            <label for="response_link">Link to your video response:</label>
+            <label for="response_link">URL of your video response:</label>
             <input type=text name=response_link id=response_link>
-            <br>
-            <input type=submit value="Crush it!">
+            <br><br>
+            <input class="submit-input" type=submit value="Crush it!" formtarget="_self">
         </form>
         
         <br>
         
-        <p>
-        {% if g.user and g.user.get('john roberts') %}
-            {% if g.user['john roberts'] %}
-              <span>Delivered a convincing delivery? Absolutely! Amazing Mr. Trump, thanks for again for standing up to illegal aliens, within our galaxy and without!</span>
+        {% if g.user and g.user.get('john roberts') is not none %}
+            {% if g.user['john roberts']['is_convinced'] %}
+              <p class='right-answer'>Gave a convincing delivery? Absolutely! Amazing Mr. Trump, thanks for again for standing up to illegal aliens, within our galaxy and without!</p>
             {% else %}
-              <span>Delivered a convincing delivery? Not at all, and the American people are getting nervous.</span>
+              <p class='wrong-answer'>Gave a convincing delivery? Not at all, and the American people are getting nervous. What happened to that beautiful smile of yours, and proud tone that your followers so desire?</p>
+            {% endif %}
+
+            {% if g.user['john roberts']['response_link'] is not none %}
+                <p>Your response:</p>
+                <video width="420" height="420" controls>
+                    <source src="{{ g.user['john roberts']['response_link'] }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
             {% endif %}
         {% else %}
-          <span>Delivered a convincing delivery? Let's find out!</span>
+          <p>Gave a convincing delivery? Let's find out!</p>
         {% endif %}
-        </p>
         
         <br>
-        <h1>Next question, from CNN all the way in the back!</h1>
+        <h1>Next question, from CNN (haha, get it? sorry, machine learning humour) all the way in the back!</h1>
         
         <video width="420" height="420" controls playsinline>
-            <source src="https://clone.verafy.me/uploads/fake_result_1590114628_Fear_Sad_Angry.mp4" type="video/mp4">
+            <source src="https://clone.verafy.me/uploads/mind_thief_log_1590252366_Sad_Neutral_Fear.mp4" type="video/mp4">
             Your browser does not support the video tag.
         </video>
         
         <form method=post enctype=multipart/form-data>
-            <label for="reporter_name">Reporter Name (do not change):</label>
-            <input type=text name=reporter_name id=reporter_name value="jim acoasta">
+            <label hidden for="reporter_name">Reporter Name (do not change):</label>
+            <input hidden type=text name=reporter_name id=reporter_name value="jim acoasta">
             <br>
-            <label for="response_link">Link to your video response:</label>
+            <label for="response_link">URL of your video response:</label>
             <input type=text name=response_link id=response_link>
-            <br>
-            <input type=submit value="Throw it down!">
+            <br><br>
+            <input class="submit-input" type=submit value="Throw it down!" formtarget="_self">
         </form>
         
         <br>
         
-        <p>
-        {% if g.user and g.user.get('jim acoasta') %}
-            {% if g.user['jim acoasta'] %}
-              <span>Delivered a convincing delivery? Yes, you really showed the lamestream media their place!</span>
+        {% if g.user and g.user.get('jim acoasta') is not none %}
+            {% if g.user['jim acoasta']['is_convinced'] %}
+              <p class='right-answer'>Gave a convincing delivery? Yes, you really showed the lamestream media their place! Now, you're ready for the real deal</p>
             {% else %}
-              <span>Delivered a convincing delivery? Not at all, and the American people are getting anxious.</span>
+              <p class='wrong-answer'>Gave a convincing delivery? Not at all, and the American people are getting anxious. Where is that signature Trump fierceness?</p>
+            {% endif %}
+            {% if g.user['jim acoasta']['response_link'] is not none %}
+                <p>Your response:</p>
+                <video width="420" height="420" controls>
+                    <source src="{{ g.user['jim acoasta']['response_link'] }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
             {% endif %}
         {% else %}
-          <span>Delivered a convincing delivery? Let's find out!</span>
+          <p>Gave a convincing delivery? Let's find out!</p>
         {% endif %}
         
-        </p>
+        <h1>Create your final broadcast</h1>
         
+        {% if True %}
+        <p>Now that you've proven your authenticity to the press, your mission is to tell the world the terrors that the government has been hiding. Make it shocking, provactive, and unforgetable - because we won't have this opportunity for long. Generate clips of at most 30 seconds, and combine them to make a 1-2 minute video. Don't forget to sprinkle in some generated reporter questions to make it interesting! A reminder that <a href="https://drive.google.com/drive/folders/1kZ1gCnpfU0BnpdU47pLM_TQ6RypDDqgw" target="_blank">here are some cropped sample images you can use.</a>
+            </p>
+        {% else %}
+            <p>If you see this message, go back up and finish answering your questions! The media is going to need to get it's daily soundbite if you want it to post something sensational!</p>
+        {% endif %}
+        
+        <p>Put all your clips together to break this vital story:
+        <a href="https://clideo.com/merge-video" target="_blank">Click this link for a video concatenation service</a>
+        </p>
+        <div hidden>
+            <form method=post enctype=multipart/form-data>
+                <label for="concat_files">Files to concatenate (Please select them in order; they must already have the same width and height):</label>
+                <input type=file name=concat_files id=concat_files multiple accept="video/*">
+                <br><br>
+                <input class="submit-input" type=submit value="Create breaking news!">
+            </form>
+        </div>
+        
+        <p>Submit your final broadcast and free the world of FBC! Send the link to the General channel on Discord for the masses to view!</p>
+        <form method=post enctype=multipart/form-data>
+            <label for="headline">Your broadcast headline (max 140 characters):</label>
+            <input type="text" name=headline id=headline maxlength="140" size="70">
+            <br>
+            <label for="group_name">Your group name:</label>
+            <input type="text" name=group_name id=group_name>
+            <br>
+            <label for="broadcast_video">Your show-stopping broadcast video:</label>
+            <input type=file name=broadcast_video id=broadcast_video accept="video/*">
+            <br><br>
+            <input class="submit-input" type=submit value="Alert the world of breaking news!">
+        </form>
+      
+        <script>
+        var isOnIOS = navigator.userAgent.match(/iPad/i)|| navigator.userAgent.match(/iPhone/i);
+        var eventName = isOnIOS ? "pagehide" : "beforeunload";
+
+        document.addEventListener("DOMContentLoaded", function(event) { 
+            var scrollpos = localStorage.getItem('scrollpos');
+            if (scrollpos) window.scrollTo(0, scrollpos);
+        });
+
+        window.addEventListener(eventName, function (event) { 
+            localStorage.setItem('scrollpos', window.scrollY);
+        });
+        </script>
         <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
     </body>

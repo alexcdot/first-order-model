@@ -25,6 +25,7 @@ var sourceBuffer;
 var gumVideo = document.querySelector('video#gum');
 var recordedVideo = document.querySelector('video#recorded');
 
+var toggleCameraButton = document.querySelector('button#toggleCamera');
 var recordButton = document.querySelector('button#record');
 var playButton = document.querySelector('button#play');
 var downloadButton = document.querySelector('button#download');
@@ -34,6 +35,7 @@ var mimeTypeRecording = 'video/webm; codecs="vp9"';
 var fileExtension = '.webm';
 var mimeType = 'video/webm';
 
+toggleCameraButton.onclick = toggleCamera;
 recordButton.onclick = toggleRecording;
 playButton.onclick = play;
 downloadButton.onclick = download;
@@ -43,9 +45,8 @@ console.log(location.host);
 var isSecureOrigin = location.protocol === 'https:' ||
   location.host.includes('localhost');
 if (!isSecureOrigin) {
-  alert('getUserMedia() must be run from a secure origin: HTTPS:' +
-    '\n\nChanging protocol to HTTPS');
-  location.protocol = 'HTTPS';
+  alert('getUserMedia() must be run from a secure origin: HTTPS' +
+    '\n\nWebcam recording will not work');
 }
 
 var constraints = {
@@ -64,10 +65,27 @@ function successCallback(stream) {
   console.log('getUserMedia() got stream: ', stream);
   window.stream = stream;
   gumVideo.srcObject = stream;
+  recordButton.disabled = false;
 }
 
 function errorCallback(error) {
   console.log('navigator.getUserMedia error: ', error);
+}
+
+function toggleCamera() {
+  if (window.stream.active) {
+    console.log('stopping the stream');
+    window.stream.getTracks().forEach(track => track.stop());
+    recordButton.disabled = true;
+  } else {
+    console.log('starting the stream');
+    navigator.mediaDevices.getUserMedia(
+      constraints
+    ).then(
+      successCallback,
+      errorCallback
+    );
+  }
 }
 
 function handleSourceOpen(event) {
@@ -104,21 +122,22 @@ function startRecording() {
   var options = {mimeType: mimeTypeRecording, bitsPerSecond: 1000000};
   recordedBlobs = [];
   try {
+    console.log("Trying to start media recorder")
     mediaRecorder = new MediaRecorder(window.stream, options);
   } catch (e0) {
     console.log('Unable to create MediaRecorder with options Object: ', options, e0);
     try {
-        options = {bitsPerSecond: 1000000};
+      options = {bitsPerSecond: 1000000};
       mediaRecorder = new MediaRecorder(window.stream, options);
     } catch (e1) {
       console.log('Unable to create MediaRecorder with options Object: ', options, e1);
       try {
-      options = {mimeType: 'video/mp4', bitsPerSecond: 1000000};
+        options = {mimeType: 'video/mp4', bitsPerSecond: 1000000};
         mediaRecorder = new MediaRecorder(window.stream, options);
       } catch (e2) {
         console.log('Unable to create MediaRecorder with options Object: ', options, e2); 
         try {
-        options = {mimeType: 'video/webm; codecs="opus,vp8"', bitsPerSecond: 1000000};
+          options = {mimeType: 'video/webm; codecs="opus,vp8"', bitsPerSecond: 1000000};
           mediaRecorder = new MediaRecorder(window.stream, options);
         } catch (e3) {
           alert('MediaRecorder is not supported by this browser.');
@@ -155,7 +174,7 @@ function download() {
   var a = document.createElement('a');
   a.style.display = 'none';
   a.href = url;
-  a.download = 'web_recording' + fileExtension;
+  a.download = 'driving_video_' + String(Date.now()) + fileExtension;
   document.body.appendChild(a);
   a.click();
   setTimeout(function() {

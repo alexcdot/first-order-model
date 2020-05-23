@@ -1,0 +1,68 @@
+<!doctype html>
+
+<!--
+ *  Copyright (c) 2020 The WebRTC project authors + me, Alexander Cui. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license
+ *  that can be found in the LICENSE file in the root of the source
+ *  tree.
+-->
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1, maximum-scale=1">
+        <!--
+        <meta name="description" content="WebRTC code samples">
+        <meta itemprop="description" content="Client-side WebRTC code samples">
+        <meta itemprop="image" content="../../../images/webrtc-icon-192x192.png">
+        <meta itemprop="name" content="WebRTC code samples">
+        -->
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta id="theme-color" name="theme-color" content="#ffffff">
+
+        <base target="_blank">
+
+        <title>The Robinhood of Minds</title>
+
+        <!--
+        <link rel="icon" sizes="192x192" href="../../../images/webrtc-icon-192x192.png">
+        -->
+        <link href="//fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet" type="text/css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+    </head>
+
+    <body>
+        <div id="container">
+            <h1>You've help set the masses free from a future of mental slavery!</h1>
+            <p>
+            {% if g.group_name %}
+                Congratulations {{ g.group_name }}, we couldn't have it without you.
+            {% else %}
+                Congratulations intrepid Mind Thieves, we couldn't have done it without you.
+            {% endif %}
+            </p>
+            {% if g.submission_link %}
+                <p>Here's a reminder of the brilliant and explosive broadcast that shook the world:</p>
+                <video width="420" height="420" controls>
+                    <source src="{{ g.submission_link }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            {% endif %}
+            <p>Now go and relax, before we debrief again with the Chief Scientist one last time. We'll be in touch on the ongoing operations of the FBC, rest assured in your hands.</p>
+            
+            <p>Fortunately, it's not like anything like Project Hyperskelion is going to be developed again any time soon! That would be crazy!
+            </p>
+            <br>
+            <blockquote class="twitter-tweet"><p lang="en" dir="ltr">Coming soon</p>&mdash; Elon Musk (@elonmusk) <a href="https://twitter.com/elonmusk/status/1119883893392334848?ref_src=twsrc%5Etfw">April 21, 2019</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+            
+        </div>
+        <script src="{{ url_for('static', filename='js/confetti.js') }}"></script>
+        <script>
+            confetti.start();
+            setTimeout(function() {
+                confetti.stop();
+            }, 10000)
+        </script>
+    </body>
+</html>

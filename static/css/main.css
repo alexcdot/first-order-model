@@ -253,8 +253,17 @@ video:last-of-type {
   margin: 0 0 20px 0;
 }
 
-video#gumVideo {
-  margin: 0 20px 20px 0;
+video#gum {
+  /* margin: 0 20px 20px 0; */
+  transform: rotateY(180deg);
+  -webkit-transform:rotateY(180deg); /* Safari and Chrome */
+  -moz-transform:rotateY(180deg); /* Firefox */
+}
+
+video#recorded {
+  transform: rotateY(180deg);
+  -webkit-transform:rotateY(180deg); /* Safari and Chrome */
+  -moz-transform:rotateY(180deg); /* Firefox */
 }
 
 @media (max-width: 500px) {
@@ -293,4 +302,25 @@ video#gumVideo {
   height: 200px;
   width: 150px;
 
+}
+
+.right-answer {
+  border-style: groove;
+  padding: 10px;
+  border-color: green;
+}
+
+.wrong-answer {
+  border-style: groove;
+  padding: 10px;
+  border-color: red;
+}
+
+input {
+  margin: 0.25em;
+  padding: 0.75em;
+}
+
+.submit-input {
+  background-color: #d84a38;
 }
