@@ -146,7 +146,6 @@ ol {
 }
 
 p {
-  color: #444;
   font-weight: 300;
   line-height: 1.6em;
 }
@@ -244,7 +243,7 @@ p.borderBelow {
 
 video {
   height: 232px;
-  margin: 0 12px 20px 0;
+  margin: 0 1px 20px 0;
   vertical-align: top;
   width: 310px;/*calc(20em - 10px);*/
 }
@@ -322,5 +321,35 @@ input {
 }
 
 .submit-input {
-  background-color: #d84a38;
+  background-color: #003399;
+}
+
+h1 {color: #EEE}
+h2 {color: #EEE}
+h3 {color: #EEE}
+p {color: #EEE}
+span {color: #EEE}
+input {color: #EEE}
+label {color: #EEE}
+a {color: indianred}
+body {
+    background: #2b5876;  /* fallback for old browsers */
+    background: -webkit-linear-gradient(to right, #4e4376, #2b5876);  /* Chrome 10-25, Safari 5.1-6 */
+    background: linear-gradient(to right, #4e4376, #2b5876); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+}
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 0 4px;
+}
+
+/* Create two equal columns that sits next to each other */
+.column {
+    flex: 50%;
+    padding: 0 4px;
+}
+
+.column img {
+    margin-top: 8px;
+    vertical-align: middle;
 }
