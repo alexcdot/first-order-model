@@ -28,6 +28,8 @@ with lock:
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(current_worker_id)
 
+is_static_only = int(current_worker_id) % 8 == 1
+
 import yaml
 from argparse import ArgumentParser
 from tqdm import tqdm
@@ -163,7 +165,7 @@ def find_best_frame(source, driving, cpu=False):
 
 run_fer = (os.environ.get('RUN_FER') != '0')
 
-if run_fer:
+if run_fer and not is_static_only:
     class_names = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
     show_box = True
 
@@ -285,7 +287,9 @@ opt = parser.parse_args([
     '--result_video', 'result_robot_trump.mp4',
     '--checkpoint', 'vox-adv-cpk.pth.tar',
     '--adapt_scale', '--relative'])
-generator, kp_detector = load_checkpoints(config_path=opt.config, checkpoint_path=opt.checkpoint, cpu=opt.cpu)
+
+if not is_static_only:
+    generator, kp_detector = load_checkpoints(config_path=opt.config, checkpoint_path=opt.checkpoint, cpu=opt.cpu)
 
 app = Flask(__name__)
 app.config.from_mapping(
@@ -444,7 +448,11 @@ def generate_fake():
 def revolution():
     return render_template('revolution.html')
 
-@app.route('/', methods=['GET', 'POST'])
+general_methods = ['GET']
+if not is_static_only:
+    general_methods += ['POST']
+
+@app.route('/', methods=general_methods)
 def general():
     if request.method == 'POST':
         if len(request.form) > 0 and request.form.get('reporter_name'):
